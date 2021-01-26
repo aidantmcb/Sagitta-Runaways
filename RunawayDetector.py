@@ -7,13 +7,14 @@ from astropy.table import Table
 
 from tol_colors import tol_cmap
 from RunawayPlots import plotSky
+from RunawayPlots import plotSTILTS
 
 rainbow = tol_cmap("rainbow_PuRd")
 rainbow_r = rainbow.reversed()
 
 #### Load files for clustering and age predictions
 kc19_fname = "c:/users/sahal/desktop/ML Astro/Data/final6age.fits"
-sagitta_fname = "c:/users/sahal/desktop/sagitta-edr3.fits"
+sagitta_fname = "c:/users/sahal/desktop/sagitta_edr3-l1.fits"
 
 
 def maketable(fname):
@@ -44,7 +45,7 @@ def getalignment(l, b, pml, pmb, avg_l, avg_b, avg_pml, avg_pmb):
     angle = np.arctan2(pml - avg_pml, pmb - avg_pmb) - np.arctan2(l - avg_l, b - avg_b)
     return np.cos(angle)
 
-
+# atan2(vlsrl + 3.4, vlsrb + 4.6) - atan2(l1 +6.8, b - 17.25)
 def getregion(table, spatial, motion, radius_modifier=1):
     avg_plx, avg_l, avg_b, std_l, std_b = spatial
     avg_pml, avg_pmb, std_pml, std_pmb = motion
@@ -73,8 +74,16 @@ def main():
         cluster = kc19.iloc[np.where(kc19["labels"] == 126)[0]]
         avg_plx, avg_l, avg_b, std_l, std_b = clusterspatialparams(cluster)
         avg_pml, avg_pmb, std_pml, std_pmb = clustermotionparams(cluster)
+
+        l = 'l'
+        if avg_l < 90 or 360 - avg_l < 90:
+            l = 'l1'
+            if 360 - avg_l < 90:
+                avg_l = avg_l - 360 #Needed
+
+
         alignment = getalignment(
-            sagitta["l"],
+            sagitta[l],
             sagitta["b"],
             sagitta["vlsrl"],
             sagitta["vlsrb"],
@@ -83,17 +92,20 @@ def main():
             avg_pml,
             avg_pmb,
         )
-        max_offset = 0.01
-        aligned = np.where(1 - np.abs(alignment) < max_offset)[0]
-        print(len(aligned))
+        max_offset = 0.1
+        aligned = np.where(alignment > 1-max_offset)[0]
+        # print('Aligned Stars:', len(aligned))
 
-        tab = sagitta.iloc[aligned]
-        plotSky(tab, alignment[aligned], avg_l, avg_b)
+        plotSTILTS(avg_l , avg_b, avg_pml, avg_pmb, .80, 6.8, radius = 35, align_threshold = max_offset, l = l)
+
+
+        # tab = sagitta.iloc[aligned]
+        # plotSky(tab, alignment[aligned], avg_l, avg_b)
         
-        velos = get_relative_velocity(tab['vlsrl'], tab['vlsrb'], tab['parallax'], avg_pml, avg_pmb)
-        plotSky(tab, np.log10(velos), avg_l, avg_b)
+        # velos = get_relative_velocity(tab['vlsrl'], tab['vlsrb'], tab['parallax'], avg_pml, avg_pmb)
+        # plotSky(tab, np.log10(velos), avg_l, avg_b)
 
-        # t = Table.from_pandas(OUT)
+        # t = Table.from_pandas(tab)
         # t.write('c:/users/sahal/desktop/OUT.fits', overwrite=True)
 
 
