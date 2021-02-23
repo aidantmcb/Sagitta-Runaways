@@ -32,7 +32,8 @@ def clusterspatialparams(table):
     avg_plx = np.mean(table["parallax"])
     avg_l, avg_b = (np.mean(table["l"]), np.mean(table["b"]))
     std_l, std_b = (np.std(table["l"], ddof=1), np.std(table["b"], ddof=1))
-    return avg_plx, avg_l, avg_b, std_l, std_b
+    avg_age = np.mean(table['age'])
+    return avg_plx, avg_l, avg_b, std_l, std_b, avg_age
 
 
 def clustermotionparams(table):
@@ -62,51 +63,97 @@ def get_relative_velocity(pm_b, pm_l, parallax, avg_pml, avg_pmb):
     v_relative = pm_mag * 1000 / parallax * (3.086e13) / (3.154e7) #km/s
     return v_relative
 
+def get_tracebacktime(l, b, pm_l, pm_b, avg_l, avg_b, avg_pml, avg_pmb):
+    pm_mag = np.sqrt((pm_l - avg_pml)**2 + (pm_b - avg_pmb)**2)
+    tbt = np.sqrt((l-avg_l)**2 + (b-avg_b)**2) / pm_mag * 13600000
+    return tbt
+
+
 #### Establish a probability of individual stars within some region of being cluster members
 def main():
-    kc19 = maketable(kc19_fname)
-    sagitta = maketable(sagitta_fname)
+    kc19 = maketable(kc19_fname) #Get table for cluster averages
+    kc19 = kc19.iloc[np.where(kc19['parallax'] > 1)[0]]
+    young_clusters = np.where(np.power(10,(kc19['age']-6))<45)[0]
+    labels = np.sort(np.unique(kc19['labels'].iloc[young_clusters]))
+    print(labels)
+    print('Regions:', len(labels))
+
+    sagitta = maketable(sagitta_fname) #Get table for model outputs
     sagitta = sagitta.iloc[
-        np.where((sagitta["yso"] > 0.80) & (np.power(10, sagitta["age"] - 6) < 45))[0]
+        np.where((sagitta["yso"] > 0.80) & (sagitta['eparallax'] > 1))[0]
     ]
-    ids = [13]  # Orion: 13, Serpens: 23 - labels: Orion 29, Oph 126
-    for id in ids:
-        cluster = kc19.iloc[np.where(kc19["labels"] == 126)[0]]
-        avg_plx, avg_l, avg_b, std_l, std_b = clusterspatialparams(cluster)
+    if 'l1' in sagitta.columns:
+        sagitta.drop(columns=['l1']) #reset this column if it already exists
+    sagitta['l1'] = sagitta['l']
+    over180 = np.where(sagitta['l1']>180)[0]
+    sagitta['l1'].iloc[over180] = sagitta['l1'].iloc[over180]-360
+    
+    addcols = ['traceback','avg_l', 'avg_b', 'avg_pml', 'avg_pmb', 'avg_age', 'cluster_id', 'cluster_label']
+    output_frame = pd.DataFrame(columns=(list(sagitta.columns)+addcols))
+    # Orion: 13, Serpens: 23 - labels: Orion 29, Oph 126,
+
+    for label in [11]:
+        print(label)
+        cluster = kc19.iloc[np.where(kc19["labels"] == label)[0]]
+        avg_plx, avg_l, avg_b, std_l, std_b, avg_age = clusterspatialparams(cluster)
         avg_pml, avg_pmb, std_pml, std_pmb = clustermotionparams(cluster)
 
+        ids = np.min(np.unique(cluster['id']))
+
         l = 'l'
+        avg_l_save = avg_l
+
         if avg_l < 90 or 360 - avg_l < 90:
             l = 'l1'
             if 360 - avg_l < 90:
                 avg_l = avg_l - 360 #Needed
 
-
+        tab = sagitta.iloc[np.where(np.power(10, sagitta['age']-6) < np.power(10, avg_age))[0]]
         alignment = getalignment(
-            sagitta[l],
-            sagitta["b"],
-            sagitta["vlsrl"],
-            sagitta["vlsrb"],
+            tab[l],
+            tab["b"],
+            tab["vlsrl"],
+            tab["vlsrb"],
             avg_l,
             avg_b,
             avg_pml,
             avg_pmb,
         )
+
         max_offset = 0.1
         aligned = np.where(alignment > 1-max_offset)[0]
-        # print('Aligned Stars:', len(aligned))
 
-        plotSTILTS(avg_l , avg_b, avg_pml, avg_pmb, .80, 6.8, radius = 35, align_threshold = max_offset, l = l)
-
-
-        # tab = sagitta.iloc[aligned]
-        # plotSky(tab, alignment[aligned], avg_l, avg_b)
         
-        # velos = get_relative_velocity(tab['vlsrl'], tab['vlsrb'], tab['parallax'], avg_pml, avg_pmb)
-        # plotSky(tab, np.log10(velos), avg_l, avg_b)
 
-        # t = Table.from_pandas(tab)
-        # t.write('c:/users/sahal/desktop/OUT.fits', overwrite=True)
+        tab = tab.iloc[aligned] #SELECTION 1: alignment > 1-max_offset
+
+        
+        velos = get_relative_velocity(tab['vlsrl'], tab['vlsrb'], tab['parallax'], avg_pml, avg_pmb)
+        tab = tab.iloc[np.where(velos>10)[0]] # SELECTION  2: velocities > 10 km/s
+
+        tbt = get_tracebacktime(tab[l], tab['b'], tab['vlsrl'],  tab['vlsrb'], avg_l, avg_b, avg_pml, avg_pmb) 
+        tab['traceback'] = np.log10(tbt)
+        tab = tab.iloc[np.where(tbt <  np.power(10, avg_age))[0]]
+
+        #tab = tab.iloc[np.where(np.abs(tab['parallax'] - avg_plx) < tab['eparallax'])]
+
+        plotSTILTS(avg_l , avg_b, avg_pml, avg_pmb, .80, 6.8, align_threshold = max_offset, aux_max = 1e7, l = l)
+
+        tab['avg_l'] = np.float(avg_l_save)
+        tab['avg_b'] = np.float(avg_b)
+        tab['avg_pml'] = np.float(avg_pml)
+        tab['avg_pmb'] = np.float(avg_pmb)
+        tab['avg_age'] = np.float(avg_age)
+        tab['cluster_id'] = int(ids)
+        tab['cluster_label'] = int(label)
+        output_frame = output_frame.append(tab)
+
+    for column in output_frame.columns:
+        if output_frame[column].dtype == 'object':
+            output_frame[column] = output_frame[column].astype('float')
+    
+    t = Table.from_pandas(output_frame)
+    t.write('c:/users/sahal/desktop/RunawayDetector_2-10_Taurus.fits', overwrite=True)
 
 
 if __name__ == "__main__":
