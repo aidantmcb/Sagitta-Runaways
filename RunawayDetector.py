@@ -14,7 +14,7 @@ rainbow_r = rainbow.reversed()
 
 #### Load files for clustering and age predictions
 kc19_fname = "c:/users/sahal/desktop/ML Astro/Data/final6age.fits"
-sagitta_fname = "c:/users/sahal/desktop/sagitta_edr3-l1.fits"
+sagitta_fname = "c:/users/sahal/desktop/Sagitta_HDBSCAN.fits"
 
 
 def maketable(fname):
@@ -22,6 +22,8 @@ def maketable(fname):
     table = pd.DataFrame(data.byteswap().newbyteorder())
     for col in table:
         table.rename(columns={col: col.lower()}, inplace=True)
+    if 'pms' in table.columns:
+        table.rename(columns = {'pms': 'yso'})
     return table
 
 
@@ -57,6 +59,10 @@ def getregion(table, spatial, motion, radius_modifier=1):
     )[0]
     return circ
 
+def get_dist(l, b, avg_l, avg_b):
+        d = np.sqrt((l-avg_l)**2 + (b-avg_b)**2)
+        return d
+
 def get_relative_velocity(pm_b, pm_l, parallax, avg_pml, avg_pmb):
     pm_l_c, pm_b_c = pm_l - avg_pml, pm_b - avg_pmb
     pm_mag = np.sqrt(pm_l_c**2 + pm_b_c**2) / 13600000 * np.pi/180
@@ -71,34 +77,45 @@ def get_tracebacktime(l, b, pm_l, pm_b, avg_l, avg_b, avg_pml, avg_pmb):
 
 #### Establish a probability of individual stars within some region of being cluster members
 def main():
-    kc19 = maketable(kc19_fname) #Get table for cluster averages
-    kc19 = kc19.iloc[np.where(kc19['parallax'] > 1)[0]]
-    young_clusters = np.where(np.power(10,(kc19['age']-6))<45)[0]
-    labels = np.sort(np.unique(kc19['labels'].iloc[young_clusters]))
-    print(labels)
-    print('Regions:', len(labels))
+    # kc19 = maketable(kc19_fname) #Get table for cluster averages
+    # kc19 = kc19.iloc[np.where(kc19['parallax'] > 1)[0]]
+    # young_clusters = np.where(np.power(10,(kc19['age']-6))<45)[0]
+    # labels = np.sort(np.unique(kc19['labels'].iloc[young_clusters]))
+    # print(labels)
+    # print('Regions:', len(labels))
 
-    sagitta = maketable(sagitta_fname) #Get table for model outputs
+    sagitta = maketable(sagitta_fname) #Get table for model outputs    
     sagitta = sagitta.iloc[
-        np.where((sagitta["yso"] > 0.80) & (sagitta['eparallax'] > 1))[0]
+        np.where((sagitta["yso"] > 0.90) & (sagitta['parallax'] > 1))[0]
     ]
     if 'l1' in sagitta.columns:
         sagitta.drop(columns=['l1']) #reset this column if it already exists
     sagitta['l1'] = sagitta['l']
     over180 = np.where(sagitta['l1']>180)[0]
     sagitta['l1'].iloc[over180] = sagitta['l1'].iloc[over180]-360
+
+
+    labels = np.sort(np.unique(sagitta['labels']))
+    if -1 in labels:
+        labels = np.delete(labels, 0)
+    print(len(labels))
     
     addcols = ['traceback','avg_l', 'avg_b', 'avg_pml', 'avg_pmb', 'avg_age', 'cluster_id', 'cluster_label']
     output_frame = pd.DataFrame(columns=(list(sagitta.columns)+addcols))
     # Orion: 13, Serpens: 23 - labels: Orion 29, Oph 126,
 
-    for label in [11]:
+    for label in labels:
         print(label)
-        cluster = kc19.iloc[np.where(kc19["labels"] == label)[0]]
+        # cluster = kc19.iloc[np.where(kc19["labels"] == label)[0]]
+        cluster = sagitta.iloc[np.where(sagitta["labels"] == label)[0]]
+
         avg_plx, avg_l, avg_b, std_l, std_b, avg_age = clusterspatialparams(cluster)
         avg_pml, avg_pmb, std_pml, std_pmb = clustermotionparams(cluster)
 
-        ids = np.min(np.unique(cluster['id']))
+        if 'id' in cluster.columns: 
+            ids = np.min(np.unique(cluster['id']))
+        else:
+            ids = 00
 
         l = 'l'
         avg_l_save = avg_l
@@ -108,7 +125,15 @@ def main():
             if 360 - avg_l < 90:
                 avg_l = avg_l - 360 #Needed
 
-        tab = sagitta.iloc[np.where(np.power(10, sagitta['age']-6) < np.power(10, avg_age))[0]]
+        # print(np.power(10,sagitta['age'].iloc[5]-6), np.power(10, avg_age))
+
+        # break
+        fn = lambda a : -(1/(7.7-6))*(a-6)+2 #Double age range for younger ages, but shrink that for older ones
+        tab = sagitta.iloc[np.where(np.power(10, sagitta['age']-6) < np.power(10, avg_age-6)*fn(avg_age))[0]]
+
+        #NEW:
+        tab = tab.iloc[np.where((tab['labels'] == label) | (tab['labels'] == -1))[0]]
+
         alignment = getalignment(
             tab[l],
             tab["b"],
@@ -121,7 +146,8 @@ def main():
         )
 
         max_offset = 0.1
-        aligned = np.where(alignment > 1-max_offset)[0]
+        align_fn = lambda d : 1.025**-d
+        aligned = np.where(alignment > 1-(max_offset * align_fn(get_dist(tab['l'],tab['b'],avg_l, avg_b))))[0]
 
         
 
@@ -137,7 +163,7 @@ def main():
 
         #tab = tab.iloc[np.where(np.abs(tab['parallax'] - avg_plx) < tab['eparallax'])]
 
-        plotSTILTS(avg_l , avg_b, avg_pml, avg_pmb, .80, 6.8, align_threshold = max_offset, aux_max = 1e7, l = l)
+        # plotSTILTS(avg_l , avg_b, avg_pml, avg_pmb, .80, 6.8, align_threshold = max_offset, aux_max = 1e7, l = l)
 
         tab['avg_l'] = np.float(avg_l_save)
         tab['avg_b'] = np.float(avg_b)
@@ -153,7 +179,7 @@ def main():
             output_frame[column] = output_frame[column].astype('float')
     
     t = Table.from_pandas(output_frame)
-    t.write('c:/users/sahal/desktop/RunawayDetector_2-10_Taurus.fits', overwrite=True)
+    t.write('c:/users/sahal/desktop/RunawayDetector_3-19a.fits', overwrite=True)
 
 
 if __name__ == "__main__":

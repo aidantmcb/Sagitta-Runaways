@@ -4,7 +4,7 @@ from astropy.io import fits
 from astropy.table import Table
 import hdbscan
 
-fname = 'C:/users/sahal/Desktop/Sagitta-edr3.fits'
+fname = 'C:/users/sahal/Desktop/Sagitta-edr3_HDBSCAN_.fits'
 
 def maketable(fname):
     data = np.array(fits.open(fname)[1].data)
