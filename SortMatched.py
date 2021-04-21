@@ -23,13 +23,22 @@ l_projected.iloc[cond] = df['l1'].iloc[cond] - (df['vlsrl'].iloc[cond]-df['avg_p
 b_projected = df['b'] - (df['vlsrb']-df['avg_pmb']) / 13600000 * np.power(10, df['traceback'])
 
 
-dist = np.array(get_dist(l_projected, b_projected, getl1(df['avg_l']), df['avg_b']))
+#Select by closest distance to center of cluster
+# dist = np.array(get_dist(l_projected, b_projected, getl1(df['avg_l']), df['avg_b']))
+# df = df.iloc[np.argsort(dist)]
 
-df = df.iloc[np.argsort(dist)]
+
+#Select by shortest traceback time
+# df = df.iloc[np.argsort(df['traceback'])]
+
+#Select by closest traceback to age
+timediff = np.abs(df['age']-df['traceback'])
+df = df.iloc[np.argsort(timediff)]
+
+
 x = np.unique(df['source_id'], return_index=True)[1]
 df = df.iloc[x]
-
 df = df.iloc[np.argsort(df['cluster_label'])]
 
 t = Table.from_pandas(df) 
-t.write('c:/users/sahal/desktop/RunawayDetector_4-15a-sorted.fits', overwrite=True)
+t.write('c:/users/sahal/desktop/RunawayDetector_4-15a-timediffsorted.fits', overwrite=True)
