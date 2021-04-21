@@ -14,7 +14,7 @@ rainbow_r = rainbow.reversed()
 
 #### Load files for clustering and age predictions
 kc19_fname = "c:/users/sahal/desktop/ML Astro/Data/final6age.fits"
-sagitta_fname = "c:/users/sahal/desktop/Sagitta_HDBSCAN.fits"
+sagitta_fname = "c:/users/sahal/desktop/Sagitta_HDBSCAN_named.fits"
 
 
 def maketable(fname):
@@ -114,7 +114,7 @@ def main():
 
         if 'id' in cluster.columns: 
             ids = np.min(np.unique(cluster['id']))
-        else:
+        else: 
             ids = 00
 
         l = 'l'
@@ -124,7 +124,7 @@ def main():
             l = 'l1'
             if 360 - avg_l < 90:
                 avg_l = avg_l - 360 #Needed
-
+ 
         # print(np.power(10,sagitta['age'].iloc[5]-6), np.power(10, avg_age))
 
         # break
@@ -147,7 +147,7 @@ def main():
 
         max_offset = 0.1
         align_fn = lambda d : 1.025**-d
-        aligned = np.where(alignment > 1-(max_offset * align_fn(get_dist(tab['l'],tab['b'],avg_l, avg_b))))[0]
+        aligned = np.where(alignment > 1-(max_offset * align_fn(get_dist(tab[l],tab['b'],avg_l, avg_b))))[0]
 
         
 
@@ -175,11 +175,11 @@ def main():
         output_frame = output_frame.append(tab)
 
     for column in output_frame.columns:
-        if output_frame[column].dtype == 'object':
+        if (output_frame[column].dtype == 'object') & (column not in ['name', 'plotname']):
             output_frame[column] = output_frame[column].astype('float')
     
     t = Table.from_pandas(output_frame)
-    t.write('c:/users/sahal/desktop/RunawayDetector_3-19a.fits', overwrite=True)
+    t.write('c:/users/sahal/desktop/RunawayDetector_4-15a.fits', overwrite=True)
 
 
 if __name__ == "__main__":

@@ -4,7 +4,7 @@ from astropy.io import fits
 from astropy.table import Table
 import hdbscan
 
-fname = 'C:/users/sahal/Desktop/Sagitta-edr3-v1.fits'
+fname = 'C:/users/sahal/Desktop/Sagitta-edr3-final6.fits'
 
 def maketable(fname):
     data = np.array(fits.open(fname)[1].data)
@@ -38,4 +38,4 @@ labels2[np.where(labels2 != -1)[0]] = labels2[np.where(labels2 != -1)[0]] + np.m
 df['labels'].iloc[unclustered] = labels2
 
 tab = Table.from_pandas(df)
-tab.write('c:/users/sahal/Desktop/Sagitta_HDBSCAN.fits',overwrite=True)
+tab.write('c:/users/sahal/Desktop/Sagitta_HDBSCAN-final6.fits', overwrite=True)

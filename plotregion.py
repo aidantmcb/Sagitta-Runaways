@@ -3,9 +3,9 @@ import pandas as pd
 from astropy.io import fits
 import os
 
-fig_directory = 'c:/users/sahal/Desktop/SagittaClustered_Plots_1/Cluster-3-19a-sorted-/'
+fig_directory = 'c:/users/sahal/Desktop/SagittaClustered_Plots_1/Cluster-4-15a-sorted-/' #Previous was 3-19a, now using 4-14a
 fig_name = 'cluster-'
-fname = 'c:/Users/sahal/Desktop/RunawayDetector_3-19a-sorted.fits'
+fname = 'c:/Users/sahal/Desktop/RunawayDetector_4-15a-sorted.fits'
 data = np.array(fits.open(fname)[1].data)
 df = pd.DataFrame(data.byteswap().newbyteorder())
 
