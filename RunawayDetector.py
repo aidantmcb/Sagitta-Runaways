@@ -14,7 +14,7 @@ rainbow_r = rainbow.reversed()
 
 #### Load files for clustering and age predictions
 kc19_fname = "c:/users/sahal/desktop/ML Astro/Data/final6age.fits"
-sagitta_fname = "c:/users/sahal/desktop/Sagitta_HDBSCAN_named.fits"
+sagitta_fname = "c:/users/sahal/desktop/Sagitta_HDBSCAN_named_.fits"
 
 
 def maketable(fname):
@@ -23,7 +23,11 @@ def maketable(fname):
     for col in table:
         table.rename(columns={col: col.lower()}, inplace=True)
     if 'pms' in table.columns:
-        table.rename(columns = {'pms': 'yso'})
+        table = table.rename(columns = {'pms': 'yso'})
+    if 'clusterer' in table.columns:
+        table = table.rename(columns = {'clusterer': 'labels'})
+    # if 'pms_mean' in table.columns:
+    #     table.rename(columns = {'pms_mean': 'yso'})
     return table
 
 
@@ -74,6 +78,12 @@ def get_tracebacktime(l, b, pm_l, pm_b, avg_l, avg_b, avg_pml, avg_pmb):
     tbt = np.sqrt((l-avg_l)**2 + (b-avg_b)**2) / pm_mag * 13600000
     return tbt
 
+def within_distance(tab, avg_plx, thrshld = 100): #requires within 100 pc
+    dist = 1000/tab['parallax']
+    avg_dist = 1000/avg_plx
+    keep = np.where(np.abs(dist-avg_dist)<thrshld)[0]
+    return tab.iloc[keep]
+
 
 #### Establish a probability of individual stars within some region of being cluster members
 def main():
@@ -85,8 +95,9 @@ def main():
     # print('Regions:', len(labels))
 
     sagitta = maketable(sagitta_fname) #Get table for model outputs    
+    sagitta.rename(columns = {'pms': 'yso'})
     sagitta = sagitta.iloc[
-        np.where((sagitta["yso"] > 0.90) & (sagitta['parallax'] > 1))[0]
+        np.where((sagitta['yso'] > 0.90) & (sagitta['parallax'] > 1))[0]
     ]
     if 'l1' in sagitta.columns:
         sagitta.drop(columns=['l1']) #reset this column if it already exists
@@ -100,7 +111,7 @@ def main():
         labels = np.delete(labels, 0)
     print(len(labels))
     
-    addcols = ['traceback','avg_l', 'avg_b', 'avg_pml', 'avg_pmb', 'avg_age', 'cluster_id', 'cluster_label']
+    addcols = ['traceback','avg_l', 'avg_b', 'std_l', 'std_b' 'avg_pml', 'avg_pmb','avg_plx', 'avg_age', 'cluster_id', 'cluster_label']
     output_frame = pd.DataFrame(columns=(list(sagitta.columns)+addcols))
     # Orion: 13, Serpens: 23 - labels: Orion 29, Oph 126,
 
@@ -147,7 +158,9 @@ def main():
 
         max_offset = 0.1
         align_fn = lambda d : 1.025**-d
-        aligned = np.where(alignment > 1-(max_offset * align_fn(get_dist(tab[l],tab['b'],avg_l, avg_b))))[0]
+        aligned = np.where(alignment > 1-(max_offset * align_fn(get_dist(tab[l],tab['b'],avg_l, avg_b))))[0] 
+        #fixed, previously this was tab['l'] which is wrong in this case
+
 
         
 
@@ -160,6 +173,7 @@ def main():
         tbt = get_tracebacktime(tab[l], tab['b'], tab['vlsrl'],  tab['vlsrb'], avg_l, avg_b, avg_pml, avg_pmb) 
         tab['traceback'] = np.log10(tbt)
         tab = tab.iloc[np.where(tbt <  np.power(10, avg_age))[0]]
+        tab = within_distance(tab, avg_plx, thrshld=100)
 
         #tab = tab.iloc[np.where(np.abs(tab['parallax'] - avg_plx) < tab['eparallax'])]
 
@@ -167,19 +181,22 @@ def main():
 
         tab['avg_l'] = np.float(avg_l_save)
         tab['avg_b'] = np.float(avg_b)
+        tab['std_l'] = np.float(std_l)
+        tab['std_b'] = np.float(std_b)
         tab['avg_pml'] = np.float(avg_pml)
         tab['avg_pmb'] = np.float(avg_pmb)
+        tab['avg_plx'] = np.float(avg_plx)
         tab['avg_age'] = np.float(avg_age)
         tab['cluster_id'] = int(ids)
         tab['cluster_label'] = int(label)
         output_frame = output_frame.append(tab)
 
     for column in output_frame.columns:
-        if (output_frame[column].dtype == 'object') & (column not in ['name', 'plotname']):
+        if (output_frame[column].dtype == 'object') & (column not in ['name', 'f6_name' ,'plotname']):
             output_frame[column] = output_frame[column].astype('float')
     
     t = Table.from_pandas(output_frame)
-    t.write('c:/users/sahal/desktop/RunawayDetector_4-15a.fits', overwrite=True)
+    t.write('c:/users/sahal/desktop/RunawayDetector_4-27a.fits', overwrite=True)
 
 
 if __name__ == "__main__":
