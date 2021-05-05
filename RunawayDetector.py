@@ -131,12 +131,19 @@ def main():
         l = 'l'
         avg_l_save = avg_l
 
+
+        #ADDED FOR 4-28 TO TEST RANDOM PICKING UP SOURCES
+        # avg_l = avg_l + 10
+        # avg_l = np.where(avg_l < 360, avg_l, avg_l - 360)
+
+
         if avg_l < 90 or 360 - avg_l < 90:
             l = 'l1'
             if 360 - avg_l < 90:
                 avg_l = avg_l - 360 #Needed
  
         # print(np.power(10,sagitta['age'].iloc[5]-6), np.power(10, avg_age))
+
 
         # break
         fn = lambda a : -(1/(7.7-6))*(a-6)+2 #Double age range for younger ages, but shrink that for older ones
@@ -196,7 +203,7 @@ def main():
             output_frame[column] = output_frame[column].astype('float')
     
     t = Table.from_pandas(output_frame)
-    t.write('c:/users/sahal/desktop/RunawayDetector_4-27a.fits', overwrite=True)
+    t.write('c:/users/sahal/desktop/RunawayDetector_4-27TEST.fits', overwrite=True)
 
 
 if __name__ == "__main__":

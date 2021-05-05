@@ -4,7 +4,7 @@ from astropy.io import fits
 import os
 from astropy.table import Table
 
-fname = 'c:/Users/sahal/Desktop/RunawayDetector_4-27a.fits'
+fname = 'c:/Users/sahal/Desktop/RunawayDetector_4-27TEST.fits'
 data = np.array(fits.open(fname)[1].data)
 df = pd.DataFrame(data.byteswap().newbyteorder())
 print('Unique Sources: ' + str(len(np.unique(df['source_id'], return_index = True)[0])))
@@ -61,4 +61,4 @@ df = df.iloc[np.argsort(df['cluster_label'])]
 print('Final length: ' + str(len(df)))
 
 t = Table.from_pandas(df) 
-t.write('c:/users/sahal/desktop/RunawayDetector_4-27a-tracebacksorted.fits', overwrite=True)
+t.write('c:/users/sahal/desktop/RunawayDetector_4-27TEST-tracebacksorted.fits', overwrite=True)
