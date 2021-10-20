@@ -14,7 +14,8 @@ rainbow_r = rainbow.reversed()
 
 #### Load files for clustering and age predictions
 kc19_fname = "c:/users/sahal/desktop/ML Astro/Data/final6age.fits"
-sagitta_fname = "c:/users/sahal/desktop/Sagitta_HDBSCAN_named_.fits"
+#sagitta_fname = "c:/users/sahal/desktop/Sagitta_HDBSCAN_named_.fits"
+sagitta_fname = '/Users/aidanmcbride/Documents/Sagitta-Runaways/Sagitta_HDBSCAN_named_.fits'
 
 
 def maketable(fname):
@@ -203,7 +204,7 @@ def main():
             output_frame[column] = output_frame[column].astype('float')
     
     t = Table.from_pandas(output_frame)
-    t.write('c:/users/sahal/desktop/RunawayDetector_4-27TEST.fits', overwrite=True)
+    t.write('RunawayDetector_10-6LINEAR.fits', overwrite=True)
 
 
 if __name__ == "__main__":

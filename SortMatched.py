@@ -4,7 +4,10 @@ from astropy.io import fits
 import os
 from astropy.table import Table
 
-fname = 'c:/Users/sahal/Desktop/RunawayDetector_4-27TEST.fits'
+# fname = 'c:/Users/sahal/Desktop/RunawayDetector_4-27TEST.fits'
+#fname = '/Users/aidanmcbride/Documents/Sagitta-Runaways/10-6-21.fits'
+fname = '/Users/aidanmcbride/Documents/Sagitta-Runaways/10-6-21_nocos.fits'
+
 data = np.array(fits.open(fname)[1].data)
 df = pd.DataFrame(data.byteswap().newbyteorder())
 print('Unique Sources: ' + str(len(np.unique(df['source_id'], return_index = True)[0])))
@@ -26,7 +29,7 @@ def getl1(tabl):
         # if 360 - avg_l < 90:
         #         avg_l = avg_l - 360 #Needed
 
-l_projected = df['l'] - (df['vlsrl'] - df['avg_pml'] / 13600000 * np.power(10,df['traceback']))
+l_projected = df['l'] - (df['vlsrl'] - df['avg_pml']) / 13600000 * np.power(10,df['traceback'])
 cond = np.where((df['avg_l'] < 90) | (360 - df['avg_l'] < 90 ))[0]
 l_projected.iloc[cond] = df['l1'].iloc[cond] - (df['vlsrl'].iloc[cond]-df['avg_pml'].iloc[cond]) / 13600000 * np.power(10, df['traceback'].iloc[cond])
 b_projected = df['b'] - (df['vlsrb']-df['avg_pmb']) / 13600000 * np.power(10, df['traceback'])
@@ -61,4 +64,4 @@ df = df.iloc[np.argsort(df['cluster_label'])]
 print('Final length: ' + str(len(df)))
 
 t = Table.from_pandas(df) 
-t.write('c:/users/sahal/desktop/RunawayDetector_4-27TEST-tracebacksorted.fits', overwrite=True)
+t.write('/Users/aidanmcbride/Documents/Sagitta-Runaways/Outputs/RunawayDetector_10-6-sorted_nocos.fits', overwrite=True)

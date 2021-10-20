@@ -6,15 +6,17 @@ from matplotlib.colors import LinearSegmentedColormap
 from astropy.table import Table
 
 from tol_colors import tol_cmap
-from RunawayPlots import plotSky
-from RunawayPlots import plotSTILTS
+# from RunawayPlots import plotSky
+# from RunawayPlots import plotSTILTS
 
 rainbow = tol_cmap("rainbow_PuRd")
 rainbow_r = rainbow.reversed()
 
 #### Load files for clustering and age predictions
-kc19_fname = "c:/users/sahal/desktop/ML Astro/Data/final6age.fits"
-sagitta_fname = "c:/users/sahal/desktop/Sagitta_HDBSCAN_named_.fits"
+# kc19_fname = "c:/users/sahal/desktop/ML Astro/Data/final6age.fits 
+# sagitta_fname = "c:/users/sahal/desktop/Sagitta_HDBSCAN_named_.fits"
+kc19_fname = '/Users/aidanmcbride/Documents/Sagitta-Runaways/final6age.fits'
+sagitta_fname = '/Users/aidanmcbride/Documents/Sagitta-Runaways/Sagitta_HDBSCAN_named_.fits'
 
 
 def maketable(fname):
@@ -203,7 +205,7 @@ def main():
             output_frame[column] = output_frame[column].astype('float')
     
     t = Table.from_pandas(output_frame)
-    t.write('c:/users/sahal/desktop/RunawayDetector_4-27TEST.fits', overwrite=True)
+    # t.write('c:/users/sahal/desktop/RunawayDetector_4-27TEST.fits', overwrite=True)
 
 
 if __name__ == "__main__":
