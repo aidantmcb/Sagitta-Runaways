@@ -10,6 +10,10 @@ from astropy import units as u
 from RunawayDetectorspherical import (maketable, clusterspatialparams, clustermotionparams, getalignment, getregion, get_dist,
                 get_relative_velocity, get_tracebacktime, within_distance)
 
+#####
+#Uses spherical geometry calculations with math found at http://www.movable-type.co.uk/scripts/latlong.html
+#####
+
 kc19_fname = '/Users/aidanmcbride/Documents/Sagitta-Runaways/final6age.fits'
 sagitta_fname = '/Users/aidanmcbride/Documents/Sagitta-Runaways/Sagitta_HDBSCAN_named_.fits'
 
@@ -23,6 +27,23 @@ def bearing(lat1, lon1, lat2, lon2):
     x = np.cos(lat1)*np.sin(lat2) - np.sin(lat1)*np.cos(lat2)*np.cos(lon2-lon1)
     # return np.arctan2(y,x)
     return np.arctan2(x,y)
+
+def spheredist(lat1, lon1, lat2, lon2):
+    lat1 = lat1 * np.pi / 180
+    lon1 = lon1 * np.pi / 180
+    lat2 = lat2 * np.pi / 180
+    lon2 = lon2 * np.pi / 180
+    dlat = lat2 - lat1 
+    dlon = lon2 - lon1
+    a = np.sin(dlat/2)**2 + np.cos(lat1)*np.cos(lat2)*np.sin(dlon/2)**2
+    c = 2 * np.arctan2(np.sqrt(a), np.sqrt(1-a))
+    return c * 180 / np.pi
+
+def sphere_tracebacktime(dist, pm_l, pm_b, avg_pml, avg_pmb):
+    pm_mag = np.sqrt((pm_l - avg_pml)**2 + (pm_b - avg_pmb)**2)
+    tbt = dist / pm_mag * 13600000
+    return tbt
+
 
 def main():
     sagitta = maketable(sagitta_fname) #Get table for model outputs    
@@ -42,7 +63,8 @@ def main():
         labels = np.delete(labels, 0)
     print(len(labels))
 
-    addcols = ['traceback','avg_l', 'avg_b', 'std_l', 'std_b' 'avg_pml', 'avg_pmb','avg_plx', 'avg_age', 'cluster_id', 'cluster_label', 'alignment']
+    addcols = ['traceback','avg_l', 'avg_b', 'std_l', 'std_b' 'avg_pml', 'avg_pmb','avg_plx', 
+                    'avg_age', 'cluster_id', 'cluster_label', 'alignment', 'gcdistance', 'olddist']
     output_frame = pd.DataFrame(columns=(list(sagitta.columns)+addcols))
 
     for label in labels: 
@@ -56,6 +78,8 @@ def main():
             ids = np.min(np.unique(cluster['id']))
         else: 
             ids = 00
+
+        # sagitta['l'] = sagitta['l'] + 20 #added to test chance alignments
 
         l = 'l'
         avg_l_save = avg_l
@@ -84,13 +108,17 @@ def main():
         max_offset = 0.1
         align_fn = lambda d : 1.025**-d
         aligned = np.where(alignment > 1-(max_offset * align_fn(get_dist(tab[l],tab['b'],avg_l, avg_b))))[0] 
+        tab['alignment'] = alignment
 
-        tab = tab.iloc[aligned] #SELECTION 1: alignment > 1-max_offset
+        # tab['gcdist'] = spheredist(tab['b'], tab[l], avg_b, avg_l)#added 11-4-21
+        # tab['olddist'] = get_dist(tab[l],tab['b'], avg_l, avg_b)
+        # tab = tab.iloc[aligned] #SELECTION 1: alignment > 1-max_offset
     
         velos = get_relative_velocity(tab['vlsrl'], tab['vlsrb'], tab['parallax'], avg_pml, avg_pmb)
         tab = tab.iloc[np.where(velos>10)[0]] # SELECTION  2: velocities > 10 km/s
 
         tbt = get_tracebacktime(tab[l], tab['b'], tab['vlsrl'],  tab['vlsrb'], avg_l, avg_b, avg_pml, avg_pmb) 
+        # tbt = sphere_tracebacktime(tab['gcdist'], tab['vlsrl'], tab['vlsrb'], avg_pml, avg_pmb)
         tab['traceback'] = np.log10(tbt)
         tab = tab.iloc[np.where(tbt <  np.power(10, avg_age))[0]]
         tab = within_distance(tab, avg_plx, thrshld=100)
@@ -107,7 +135,6 @@ def main():
         tab['avg_pmb'] = np.float(avg_pmb)
         tab['avg_plx'] = np.float(avg_plx)
         tab['avg_age'] = np.float(avg_age)
-        tab['alignment'] = alignment[aligned]
         tab['cluster_id'] = int(ids)
         tab['cluster_label'] = int(label)
         output_frame = output_frame.append(tab)
@@ -117,6 +144,6 @@ def main():
             output_frame[column] = output_frame[column].astype('float')
     
     t = Table.from_pandas(output_frame)
-    t.write('/Users/aidanmcbride/Documents/Sagitta-Runaways/10-6-21_nocos.fits', overwrite=True)
+    t.write('/Users/aidanmcbride/Documents/Sagitta-Runaways/11-5-21_CHANCE.fits', overwrite=True)
 if __name__ == '__main__':
     main()
