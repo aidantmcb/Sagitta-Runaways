@@ -6,29 +6,33 @@ from astropy.table import Table
 from scipy.optimize import minimize
 
 # fname = 'c:/Users/sahal/Desktop/RunawayDetector_4-27TEST.fits'
-#fname = '/Users/aidanmcbride/Documents/Sagitta-Runaways/10-6-21.fits'
-fname = '/Users/aidanmcbride/Documents/Sagitta-Runaways/11-5-21.fits'
+# fname = '/Users/aidanmcbride/Documents/Sagitta-Runaways/10-6-21.fits'
+fname = "/Users/aidanmcbride/Documents/Sagitta-Runaways/11-5-21.fits"
 
 data = np.array(fits.open(fname)[1].data)
 df = pd.DataFrame(data.byteswap().newbyteorder())
-print('Unique Sources: ' + str(len(np.unique(df['source_id'], return_index = True)[0])))
+print("Unique Sources: " + str(len(np.unique(df["source_id"], return_index=True)[0])))
+
 
 def get_dist(l, b, avg_l, avg_b):
-        d = np.sqrt((l-avg_l)**2 + (b-avg_b)**2)
-        return d
+    d = np.sqrt((l - avg_l) ** 2 + (b - avg_b) ** 2)
+    return d
+
 
 # def getl1(tabl):
 #         over180 = np.where(tabl>180)[0]
 #         tabl.iloc[over180] = tabl.iloc[over180]-360
 #         return tabl
 
+
 def getl1(tabl):
-        avgl = np.array(tabl)
-        i = np.where(360 - avgl < 90)[0]
-        avgl[i] = avgl[i] - 360
-        return avgl 
-        # if 360 - avg_l < 90:
-        #         avg_l = avg_l - 360 #Needed
+    avgl = np.array(tabl)
+    i = np.where(360 - avgl < 90)[0]
+    avgl[i] = avgl[i] - 360
+    return avgl
+    # if 360 - avg_l < 90:
+    #         avg_l = avg_l - 360 #Needed
+
 
 # l_projected = df['l'] - (df['vlsrl'] - df['avg_pml']) / 13600000 * np.power(10,df['traceback'])
 # cond = np.where((df['avg_l'] < 90) | (360 - df['avg_l'] < 90 ))[0]
@@ -51,32 +55,36 @@ def getl1(tabl):
 # df = df.iloc[np.argsort(dist)]
 
 
-#Select by shortest traceback time
-
+# Select by shortest traceback time
 
 
 # df = df.iloc[np.argsort(df['traceback'])]
 
 # df = df.iloc[np.flip(np.argsort(df['alignment']))]
 
+
 def criteria(x, y):
-        return (1-x)*10 + y
+    return (1 - x) * 10 + y
+
 
 # best_both = minimize(criteria, df['alignment'], df['traceback']/df['avg_age'])
-df = df.iloc[np.argsort(criteria(df['alignment'], df['traceback']/df['avg_age']))]
+df = df.iloc[np.argsort(criteria(df["alignment"], df["traceback"] / df["avg_age"]))]
 
-#Select by closest traceback to age
+# Select by closest traceback to age
 # timediff = np.abs(df['age']-df['traceback'])
 # df = df.iloc[np.argsort(timediff)]
 
 
-x = np.unique(df['source_id'], return_index=True)[1]
-bestmatch = np.zeros(len(df), dtype = 'bool')
+x = np.unique(df["source_id"], return_index=True)[1]
+bestmatch = np.zeros(len(df), dtype="bool")
 bestmatch[x] = True
-#df = df.iloc[x]
-df['best'] = bestmatch
-df = df.iloc[np.argsort(df['cluster_label'])]
-print('Final length: ' + str(len(df)))
+# df = df.iloc[x]
+df["best"] = bestmatch
+df = df.iloc[np.argsort(df["cluster_label"])]
+print("Final length: " + str(len(df)))
 
-t = Table.from_pandas(df) 
-t.write('/Users/aidanmcbride/Documents/Sagitta-Runaways/Outputs/RunawayDetector_11-5-21-AlignTimeSorted.fits', overwrite=True)
+t = Table.from_pandas(df)
+t.write(
+    "/Users/aidanmcbride/Documents/Sagitta-Runaways/Outputs/RunawayDetector_11-5-21-AlignTimeSorted.fits",
+    overwrite=True,
+)
