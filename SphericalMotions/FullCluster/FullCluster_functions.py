@@ -20,6 +20,13 @@ def maketable(fname):
     #     table.rename(columns = {'pms_mean': 'yso'})
     return table
 
+def clusterspatialparams(table):
+    avg_plx = np.mean(table["parallax"])
+    avg_l, avg_b = (np.mean(table["l"]), np.mean(table["b"]))
+    std_l, std_b = (np.std(table["l"], ddof=1), np.std(table["b"], ddof=1))
+    avg_age = np.mean(table['age'])
+    return avg_plx, avg_l, avg_b, std_l, std_b, avg_age
+
 def clustermotionparams(table):
     avg_pml, avg_pmb = (np.mean(table["vlsrl"]), np.mean(table["vlsrb"]))
     std_pml, std_pmb = (np.std(table["vlsrl"], ddof=1), np.std(table["vlsrb"], ddof=1))
