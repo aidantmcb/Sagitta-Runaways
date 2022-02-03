@@ -33,7 +33,7 @@ def spheredist(lat1, lon1, lat2, lon2):
     lon1 = lon1 * np.pi / 180
     lat2 = lat2 * np.pi / 180
     lon2 = lon2 * np.pi / 180
-    dlat = lat2 - lat1 
+    dlat = lat2 - lat1 ####
     dlon = lon2 - lon1
     a = np.sin(dlat/2)**2 + np.cos(lat1)*np.cos(lat2)*np.sin(dlon/2)**2
     c = 2 * np.arctan2(np.sqrt(a), np.sqrt(1-a))
